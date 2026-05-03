@@ -335,12 +335,12 @@ class TestParseStatus:
         assert r["club_sel"] == 7
         assert CLUB_NAMES[r["club_sel"]] == "Putter"
 
-    def test_club_sel_6_maps_to_sw(self):
-        """club_sel=6 confirmed by user to be Sand Wedge."""
+    def test_club_sel_6_maps_to_8iron(self):
+        """club_sel=6 confirmed by SQGDB.bytes (ClubType=18 / Iron8 sessions)."""
         line = " RX : GetStatus Ready, club_sel 6, club_num 9, handed 0, sensor 1"
         r = parse_status(line)
         assert r["club_sel"] == 6
-        assert CLUB_NAMES[r["club_sel"]] == "SW"
+        assert CLUB_NAMES[r["club_sel"]] == "8-Iron"
 
     def test_all_getstatus_states_match(self):
         """Parser must match regardless of state word (Detect/Ready/None)."""
@@ -636,9 +636,9 @@ class TestClubNames:
     def test_club_7_is_putter(self):
         assert CLUB_NAMES[7] == "Putter"
 
-    def test_club_6_is_sw(self):
-        """club_sel=6 confirmed by user to be Sand Wedge."""
-        assert CLUB_NAMES[6] == "SW"
+    def test_club_6_is_8iron(self):
+        """club_sel=6 confirmed by SQGDB.bytes Iron8 session (ClubType=18)."""
+        assert CLUB_NAMES[6] == "8-Iron"
 
     def test_club_5_is_9iron(self):
         assert CLUB_NAMES[5] == "9-Iron"

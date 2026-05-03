@@ -15,35 +15,38 @@ import json
 import math
 import os
 import re
+import sqlite3
 import threading
 import time
 from datetime import datetime
 from queue import Empty, Queue
+from typing import Optional
 
 import requests
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
-DEFAULT_LOG_PATH = os.path.join(
-    os.path.expanduser("~"),
-    "AppData", "LocalLow", "Invant", "Square Golf", "Player.log",
+_SQ_DIR = os.path.join(
+    os.path.expanduser("~"), "AppData", "LocalLow", "Invant", "Square Golf",
 )
+DEFAULT_LOG_PATH   = os.path.join(_SQ_DIR, "Player.log")
+DEFAULT_SQGDB_PATH = os.path.join(_SQ_DIR, "SQGDB.bytes")
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 DEFAULT_MODEL      = "llama3.2"
 HEARTBEAT_TIMEOUT  = 10  # seconds before dot turns amber
 
-# Club number → name mapping (adjust to match your device's numbering)
-# Square Golf SQG device club_sel mapping.
-# club_sel=6 → "SW" confirmed by user; all 1091 log entries had club_sel=6.
-# Classic 7-club beginner bag (the most common Square Golf starter config):
+# Club number → name mapping (club_sel from GetStatus log lines).
+# club_sel=6 → "8-Iron" confirmed by SQGDB.bytes (ClubType=18/"Iron8" session
+# maps to sel=6 in Player.log; all 1091 log entries had club_sel=6).
+# Typical 7-club bag ordering for Square Golf SQG device:
 CLUB_NAMES = {
     1:  "Driver",
     2:  "3-Wood",
     3:  "5-Iron",
     4:  "7-Iron",
     5:  "9-Iron",
-    6:  "SW",
+    6:  "8-Iron",
     7:  "Putter",
 }
 
@@ -211,6 +214,55 @@ def _estimate_carry(ball_speed_ms: float, launch_deg: float,
         y  += vy * dt
 
     return round(x / 0.9144, 1)
+
+
+def _query_sim_carry(db_path: str, ball_speed_ms: float, launch_deg: float) -> Optional[float]:
+    """
+    Query SQGDB.bytes for the simulator's actual carry distance for this shot.
+
+    Matches the most recent shot in the database where ball speed is within
+    ±0.3 m/s and launch angle within ±1.5°. Retries up to 3 times with a
+    short delay to allow the simulator to finish writing the result.
+
+    Args:
+        db_path:       Path to SQGDB.bytes (SQLite database).
+        ball_speed_ms: Ball speed in m/s (from Player.log).
+        launch_deg:    Launch angle in degrees (from Player.log).
+
+    Returns:
+        Carry in yards from the simulator's physics, or None if unavailable.
+    """
+    if not os.path.exists(db_path):
+        return None
+
+    for attempt in range(3):
+        try:
+            # Open read-only; the simulator holds a write lock while running
+            conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True,
+                                   timeout=2.0)
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT json_extract(ShotResult, '$.CarryDistance')
+                FROM   IVShotLog
+                WHERE  abs(json_extract(ShotData, '$.Speed') - ?) < 0.3
+                  AND  abs(json_extract(ShotData, '$.Angle') - ?) < 1.5
+                  AND  json_extract(ShotResult, '$.CarryDistance') > 0
+                ORDER  BY ShotID DESC
+                LIMIT  1
+                """,
+                (ball_speed_ms, launch_deg),
+            )
+            row = cur.fetchone()
+            conn.close()
+            if row and row[0] is not None:
+                return round(float(row[0]) / 0.9144, 1)
+        except Exception:
+            pass
+        if attempt < 2:
+            time.sleep(0.4)  # give the simulator time to flush the result
+
+    return None
 
 
 def _estimate_side(carry_yards: float, side_angle_deg: float) -> float:
@@ -422,13 +474,15 @@ def _style(style: ttk.Style):
 
 
 class App(tk.Tk):
-    def __init__(self, log_path: str, model: str, ollama_url: str):
+    def __init__(self, log_path: str, model: str, ollama_url: str,
+                 sqgdb_path: str = DEFAULT_SQGDB_PATH):
         super().__init__()
         self.title("Golf Shot Analyzer")
         self.geometry("960x720")
         self.minsize(760, 560)
         self.configure(bg=BG)
 
+        self._sqgdb_path      = sqgdb_path
         self._queue           = Queue()
         self._tailer = None  # type: LogTailer
         self._pending_shot    = None   # shot data waiting for matching club data
@@ -698,8 +752,15 @@ class App(tk.Tk):
         # Convert ball speed m/s → mph to match simulator display
         merged["ball_speed_mph"] = round(merged["ball_speed"] * 2.237, 1)
 
-        # Estimate carry and side distance from ball speed + launch angle
-        merged["carry_yards"]     = _estimate_carry(merged["ball_speed"], merged["launch_angle"], merged["backspin"])
+        # Carry distance: use simulator's exact value from SQGDB.bytes if available,
+        # otherwise fall back to physics simulation (drag + lift model).
+        sim_carry = _query_sim_carry(
+            self._sqgdb_path, merged["ball_speed"], merged["launch_angle"]
+        )
+        merged["carry_yards"] = (
+            sim_carry if sim_carry is not None
+            else _estimate_carry(merged["ball_speed"], merged["launch_angle"], merged["backspin"])
+        )
         merged["side_dist_yards"] = _estimate_side(merged["carry_yards"], merged["side_angle"])
 
         # Directional labels for LLM prompt
@@ -790,11 +851,13 @@ class App(tk.Tk):
 def main():
     ap = argparse.ArgumentParser(description="Golf Shot Analyzer")
     ap.add_argument("--log",    default=DEFAULT_LOG_PATH,   help="Path to Player.log")
+    ap.add_argument("--sqgdb", default=DEFAULT_SQGDB_PATH,  help="Path to SQGDB.bytes")
     ap.add_argument("--model",  default=DEFAULT_MODEL,      help="Ollama model name")
     ap.add_argument("--ollama", default=DEFAULT_OLLAMA_URL, help="Ollama server URL")
     args = ap.parse_args()
 
-    App(log_path=args.log, model=args.model, ollama_url=args.ollama).mainloop()
+    App(log_path=args.log, model=args.model, ollama_url=args.ollama,
+        sqgdb_path=args.sqgdb).mainloop()
 
 
 if __name__ == "__main__":
