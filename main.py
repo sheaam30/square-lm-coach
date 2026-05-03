@@ -5,13 +5,15 @@ Tails a Player.log file, parses golf shot data, and streams AI feedback via Olla
 
 Usage:
     python main.py
-    python main.py --log "C:\\path\\to\\Player.log"
-    python main.py --log "C:\\path\\to\\Player.log" --model llama3.2 --ollama http://localhost:11434
+    python main.py
+    python main.py --log "C:\\Users\\YourName\\AppData\\LocalLow\\Invant\\Square Golf\\Player.log"
+    python main.py --model llama3.2 --ollama http://localhost:11434
 """
 
 import argparse
 import json
 import math
+import os
 import re
 import threading
 import time
@@ -23,7 +25,10 @@ import tkinter as tk
 from tkinter import filedialog, scrolledtext, ttk
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
-DEFAULT_LOG_PATH   = r"C:\Users\Public\Player.log"
+DEFAULT_LOG_PATH = os.path.join(
+    os.path.expanduser("~"),
+    "AppData", "LocalLow", "Invant", "Square Golf", "Player.log",
+)
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 DEFAULT_MODEL      = "llama3.2"
 HEARTBEAT_TIMEOUT  = 10  # seconds before dot turns amber
