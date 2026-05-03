@@ -1,0 +1,90 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+    tags:     ['v*']
+  workflow_dispatch:
+
+jobs:
+  test-and-build:
+    name: Test → Build → Package
+    runs-on: windows-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Python setup ──────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # ── 3. Install dependencies ──────────────────────────────────────────
+      - name: Install dependencies
+        run: pip install requests pytest pyinstaller
+
+      # ── 4. Run tests — fail fast before building ─────────────────────────
+      - name: Run test suite
+        run: pytest tests/test_parsing.py -v --tb=short
+
+      # ── 5. Determine artifact version string ─────────────────────────────
+      - name: Determine version string
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            echo "version=dev-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── 6. Build .exe ─────────────────────────────────────────────────────
+      - name: Build .exe with PyInstaller
+        run: pyinstaller golf_shot_analyzer.spec
+
+      # ── 7. Rename with version ────────────────────────────────────────────
+      - name: Rename artifact
+        shell: bash
+        run: |
+          mv dist/square-lm-coach.exe \
+             "dist/square-lm-coach-${{ steps.version.outputs.version }}-windows.exe"
+
+      # ── 8. Upload as workflow artifact (every run) ────────────────────────
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "square-lm-coach-${{ steps.version.outputs.version }}-windows"
+          path: "dist/square-lm-coach-${{ steps.version.outputs.version }}-windows.exe"
+          retention-days: 30
+
+      # ── 9. Create GitHub Release (v* tags only) ───────────────────────────
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "dist/square-lm-coach-${{ steps.version.outputs.version }}-windows.exe"
+          name: "Golf Shot Analyzer ${{ github.ref_name }}"
+          body: |
+            ## Golf Shot Analyzer ${{ github.ref_name }}
+
+            **Requirements:** Windows 10+, [Ollama](https://ollama.com/) installed and running locally.
+
+            ### Quick start
+            1. Download `square-lm-coach-${{ github.ref_name }}-windows.exe` below
+            2. Double-click to run — no installer or Python required
+            3. If Windows SmartScreen appears: click **More info → Run anyway** (app is unsigned)
+            4. Set the **Log File** path to your launch monitor's `Player.log`
+            5. Install Ollama and pull a model:
+               ```
+               ollama pull llama3.2
+               ```
+            6. Hit shots — AI coaching feedback streams in automatically
+
+            > **Ollama is not bundled.** Install it separately from https://ollama.com/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
