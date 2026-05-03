@@ -657,6 +657,11 @@ class App(tk.Tk):
             self._tailer.stop()
         self._tailer = LogTailer(path, self._queue)
         self._tailer.start()
+        # Report SQGDB status so the user can see whether carry will use sim data
+        if os.path.exists(self._sqgdb_path):
+            self._queue.put(("status", f"SQGDB found — carry will use simulator data ({self._sqgdb_path})"))
+        else:
+            self._queue.put(("status", f"SQGDB not found — carry will use physics estimate ({self._sqgdb_path})"))
 
     def _restart_tailer(self):
         self._start_tailer(self._path_var.get())
@@ -757,6 +762,7 @@ class App(tk.Tk):
         sim_carry = _query_sim_carry(
             self._sqgdb_path, merged["ball_speed"], merged["launch_angle"]
         )
+        merged["_carry_source"] = "sim" if sim_carry is not None else "est"
         merged["carry_yards"] = (
             sim_carry if sim_carry is not None
             else _estimate_carry(merged["ball_speed"], merged["launch_angle"], merged["backspin"])
@@ -787,7 +793,9 @@ class App(tk.Tk):
         self._fields["carry"].configure(text=v("carry", "°"))
         self._fields["total_dist"].configure(text=v("total_dist",            " rpm"))
         self._fields["side_dist"].configure(text=v("side_dist",              " rpm"))
-        self._fields["carry_yards"].configure(text=f'{merged["carry_yards"]} yds')
+        carry_src = "sim" if merged["_carry_source"] == "sim" else "est"
+        self._fields["carry_yards"].configure(
+            text=f'{merged["carry_yards"]} yds ({carry_src})')
         self._fields["side_dist_yards"].configure(text=f'{merged["side_dist_yards"]} yds')
         def _vdir(key: str, fmt_fn) -> str:
             text = fmt_fn(merged[key])
