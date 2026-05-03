@@ -404,6 +404,7 @@ class App(tk.Tk):
         self._llm_raw         = ""     # accumulated LLM response for post-clean render
         self._remain_dist     = None   # last known remaining distance to hole (yds)
         self._last_shot_data  = None   # merged shot dict from most recent complete shot
+        self._shot_history    = []     # list of (shot_summary, feedback) for LLM context
 
         _style(ttk.Style(self))
         self._build_ui(log_path, model, ollama_url)
@@ -632,6 +633,19 @@ class App(tk.Tk):
                 self._feedback.insert(tk.END, header + cleaned)
                 self._feedback.see(tk.END)
                 self._feedback.config(state=tk.DISABLED)
+                # Save to history for future shots (keep last 3)
+                if self._last_shot_data:
+                    d = self._last_shot_data
+                    summary = (
+                        f"{d['club_name']} | {d['ball_speed_mph']} mph | "
+                        f"{d['carry_yards']} yds carry | "
+                        f"Path: {d['club_path_dir']} | "
+                        f"Face: {d['face_angle_dir']} | "
+                        f"Attack: {d['attack_angle_dir']}"
+                    )
+                    self._shot_history.append((summary, cleaned))
+                    if len(self._shot_history) > 3:
+                        self._shot_history.pop(0)
 
     # ── Shot handling ─────────────────────────────────────────────────────
 
@@ -712,6 +726,17 @@ class App(tk.Tk):
             self._feedback.config(state=tk.DISABLED)
             self._llm_busy = False
             return
+
+        # Prepend previous shots so the LLM can track improvement over time
+        if self._shot_history:
+            history_lines = ["PREVIOUS SHOTS (use this to assess improvement):"]
+            for i, (summary, feedback) in enumerate(self._shot_history, 1):
+                # Trim feedback to first 300 chars to keep context compact
+                short_fb = feedback.strip()[:300].rsplit(" ", 1)[0]
+                history_lines.append(f"\nShot {i}: {summary}")
+                history_lines.append(f"  Advice given: {short_fb}...")
+            history_lines.append("\nCURRENT SHOT:")
+            prompt = "\n".join(history_lines) + "\n" + prompt
 
         query_ollama(
             url=self._ollama_var.get(),
