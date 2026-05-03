@@ -32,17 +32,18 @@ CLUB_NAMES = {
     1:  "Driver",
     2:  "3-Wood",
     3:  "5-Wood",
-    4:  "4-Iron",
-    5:  "5-Iron",
-    6:  "6-Iron",
-    7:  "7-Iron",
-    8:  "8-Iron",
-    9:  "9-Iron",
-    10: "PW",
-    11: "GW",
-    12: "SW",
-    13: "LW",
-    14: "Putter",
+    4:  "3-Iron",
+    5:  "4-Iron",
+    6:  "5-Iron",
+    7:  "6-Iron",
+    8:  "7-Iron",
+    9:  "8-Iron",
+    10: "9-Iron",
+    11: "PW",
+    12: "GW",
+    13: "SW",
+    14: "LW",
+    15: "Putter",
 }
 
 DEFAULT_PROMPT = """\
@@ -58,11 +59,11 @@ SHOT DATA:
   Direction    : {side_angle}°
   Spin Rate    : {backspin} rpm
   Spin Axis    : {carry}°
-  Back Spin    : {total_dist} rpm
-  Side Spin    : {side_dist} rpm
+  Carry        : {carry_yards} yds
+  Side Dist    : {side_dist_yards} yds
 
 CLUB DATA:
-  Club Speed     : {club_speed} m/s
+  Club Path      : {club_speed}°
   Face to Target : {attack_angle}°
   Attack Angle   : {club_path}°   (negative = descending blow)
   Dynamic Loft   : {face_angle}°
@@ -331,10 +332,10 @@ class App(tk.Tk):
             ("Direction",     "side_angle"),
             ("Spin Rate",     "backspin"),
             ("Spin Axis",     "carry"),
-            ("Back Spin",     "total_dist"),
-            ("Side Spin",     "side_dist"),
+            ("Carry",         "carry_yards"),
+            ("Side Dist",     "side_dist_yards"),
             None,
-            ("Club Speed",    "club_speed"),
+            ("Club Path",     "club_speed"),
             ("Face to Target","attack_angle"),
             ("Attack Angle",  "club_path"),
             ("Dynamic Loft",  "face_angle"),
@@ -467,6 +468,12 @@ class App(tk.Tk):
         # Convert ball speed m/s → mph to match simulator display
         merged["ball_speed_mph"] = round(merged["ball_speed"] * 2.237, 1)
 
+        # Convert carry/side distance cm → yards to match simulator display
+        merged["carry_yards"]          = round(merged["total_dist"] / 91.44, 1)
+        merged["carry_yards_valid"]    = merged.get("total_dist_valid", True)
+        merged["side_dist_yards"]      = round(merged["side_dist"] / 91.44, 1)
+        merged["side_dist_yards_valid"]= merged.get("side_dist_valid", True)
+
         # Validity suffix helper
         def v(key: str, unit: str = "") -> str:
             val   = merged[key]
@@ -482,9 +489,9 @@ class App(tk.Tk):
         self._fields["side_angle"].configure(text=f"{merged['side_angle']}°")
         self._fields["backspin"].configure(text=v("backspin",       " rpm"))
         self._fields["carry"].configure(text=v("carry"))
-        self._fields["total_dist"].configure(text=v("total_dist"))
-        self._fields["side_dist"].configure(text=v("side_dist"))
-        self._fields["club_speed"].configure(text=v("club_speed",   " m/s"))
+        self._fields["carry_yards"].configure(text=v("carry_yards",          " yds"))
+        self._fields["side_dist_yards"].configure(text=v("side_dist_yards",  " yds"))
+        self._fields["club_speed"].configure(text=v("club_speed",            "°"))
         self._fields["attack_angle"].configure(text=v("attack_angle","°"))
         self._fields["club_path"].configure(text=v("club_path",     "°"))
         self._fields["face_angle"].configure(text=v("face_angle",   "°"))

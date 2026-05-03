@@ -62,12 +62,12 @@ CLUB_LINE_PUSH = (
     "Recv Club Data : 12.92(True), 6.21(True), -6.64(True), 33.36(True)"
 )
 
-# Status: right-handed, 7-iron (club_num 9)
+# Status: right-handed, 8-iron (club_num 9)
 STATUS_LINE_7I_RIGHT = (
     " RX : GetStatus Ready, club_sel 6, club_num 9, handed 0, sensor 1"
 )
 
-# Status: right-handed, 4-iron (club_num 6)
+# Status: right-handed, 5-iron (club_num 6)
 STATUS_LINE_4I_RIGHT = (
     " RX : GetStatus Detect, club_sel 6, club_num 6, handed 0, sensor 1"
 )
@@ -328,9 +328,9 @@ class TestParseStatus:
         assert CLUB_NAMES[r["club_num"]] == "Driver"
 
     def test_club_num_maps_to_putter(self):
-        line = " RX : GetStatus Ready, club_sel 14, club_num 14, handed 0, sensor 1"
+        line = " RX : GetStatus Ready, club_sel 15, club_num 15, handed 0, sensor 1"
         r = parse_status(line)
-        assert r["club_num"] == 14
+        assert r["club_num"] == 15
         assert CLUB_NAMES[r["club_num"]] == "Putter"
 
     def test_all_getstatus_states_match(self):
@@ -618,22 +618,28 @@ class TestLogTailerNullStripping:
 
 class TestClubNames:
 
-    def test_fourteen_clubs_defined(self):
-        assert len(CLUB_NAMES) == 14
+    def test_fifteen_clubs_defined(self):
+        assert len(CLUB_NAMES) == 15
 
     def test_club_1_is_driver(self):
         assert CLUB_NAMES[1] == "Driver"
 
-    def test_club_14_is_putter(self):
-        assert CLUB_NAMES[14] == "Putter"
+    def test_club_15_is_putter(self):
+        assert CLUB_NAMES[15] == "Putter"
 
-    def test_club_9_is_9iron(self):
-        assert CLUB_NAMES[9] == "9-Iron"
+    def test_club_14_is_lw(self):
+        assert CLUB_NAMES[14] == "LW"
 
-    def test_club_10_is_pw(self):
-        assert CLUB_NAMES[10] == "PW"
+    def test_club_9_is_8iron(self):
+        assert CLUB_NAMES[9] == "8-Iron"
 
-    @pytest.mark.parametrize("num", range(1, 15))
+    def test_club_10_is_9iron(self):
+        assert CLUB_NAMES[10] == "9-Iron"
+
+    def test_club_11_is_pw(self):
+        assert CLUB_NAMES[11] == "PW"
+
+    @pytest.mark.parametrize("num", range(1, 16))
     def test_all_club_numbers_have_names(self, num):
         assert num in CLUB_NAMES
         assert isinstance(CLUB_NAMES[num], str)
