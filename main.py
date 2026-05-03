@@ -154,9 +154,10 @@ def _estimate_carry(ball_speed_ms: float, launch_deg: float) -> float:
     """
     Estimate carry distance in yards using simple projectile motion.
 
-    Empirically matches the Square Golf simulator's carry display — verified
-    against a user-reported data point (21.65 m/s / 24.79° → 39.9 yds).
-    No air resistance or spin lift modelled.
+    Estimates carry using projectile motion with an empirical aerodynamic
+    correction factor calibrated to two verified data points:
+      slow shot: 21.65 m/s / 24.79° → 39.9 yds
+      fast shot: 46.98 m/s / 15.23° → 145.4 yds
 
     Args:
         ball_speed_ms: Ball speed in m/s (field 1 from device).
@@ -168,7 +169,14 @@ def _estimate_carry(ball_speed_ms: float, launch_deg: float) -> float:
     if ball_speed_ms <= 0 or launch_deg <= 0:
         return 0.0
     carry_m = ball_speed_ms ** 2 * math.sin(math.radians(2 * launch_deg)) / 9.81
-    return round(carry_m / 0.9144, 1)
+    # Empirical aerodynamic correction calibrated to two verified data points:
+    # v=21.65 m/s (48.4 mph), 24.79° → 39.9 yds (factor 1.000)
+    # v=46.98 m/s (105.1 mph), 15.23° → 145.4 yds (factor 1.165)
+    _LO_V, _HI_V = 21.65, 46.98
+    _LO_F, _HI_F = 1.000, 1.165
+    t = max(0.0, (ball_speed_ms - _LO_V) / (_HI_V - _LO_V))
+    correction = _LO_F + t * (_HI_F - _LO_F)
+    return round(carry_m * correction / 0.9144, 1)
 
 
 def _estimate_side(carry_yards: float, side_angle_deg: float) -> float:

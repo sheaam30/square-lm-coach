@@ -694,6 +694,14 @@ class TestEstimateCarry:
             for a in [5, 15, 30, 45, 60]:
                 assert _estimate_carry(v, a) >= 0.0
 
+    def test_matches_fast_shot_verified_example(self):
+        """
+        Issue #8: User-verified: 46.98 m/s (105.1 mph), 15.23° → simulator shows 145.4 yds.
+        With aerodynamic correction formula must stay within 1.5 yds of that reference.
+        """
+        carry = _estimate_carry(46.98, 15.23)
+        assert abs(carry - 145.4) < 1.5, f"Expected ~145.4 yds, got {carry}"
+
     @pytest.mark.parametrize("speed,angle,min_yds,max_yds", [
         # chip: slow speed, high loft
         (10.0, 30.0,  5,  30),
