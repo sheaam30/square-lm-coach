@@ -11,6 +11,7 @@ Usage:
 
 import argparse
 import json
+import math
 import re
 import threading
 import time
@@ -61,6 +62,8 @@ SHOT DATA:
   Spin Axis    : {carry}°
   Back Spin    : {total_dist} rpm
   Side Spin    : {side_dist} rpm
+  Carry        : {carry_yards} yds
+  Side         : {side_dist_yards} yds
 
 CLUB DATA:
   Club Path      : {club_speed}°
@@ -139,6 +142,45 @@ def parse_status(line: str):
         "club_num": int(m.group(2)),
         "handed":   "Left" if m.group(3) == "1" else "Right",
     }
+
+
+# ── Carry estimation ─────────────────────────────────────────────────────────
+def _estimate_carry(ball_speed_ms: float, launch_deg: float) -> float:
+    """
+    Estimate carry distance in yards using simple projectile motion.
+
+    Empirically matches the Square Golf simulator's carry display — verified
+    against a user-reported data point (21.65 m/s / 24.79° → 39.9 yds).
+    No air resistance or spin lift modelled.
+
+    Args:
+        ball_speed_ms: Ball speed in m/s (field 1 from device).
+        launch_deg:    Launch angle in degrees (field 2 from device).
+
+    Returns:
+        Carry in yards, or 0.0 for non-positive inputs.
+    """
+    if ball_speed_ms <= 0 or launch_deg <= 0:
+        return 0.0
+    carry_m = ball_speed_ms ** 2 * math.sin(math.radians(2 * launch_deg)) / 9.81
+    return round(carry_m / 0.9144, 1)
+
+
+def _estimate_side(carry_yards: float, side_angle_deg: float) -> float:
+    """
+    Estimate lateral offset in yards at carry distance.
+
+    Approximates the ball's offline distance assuming a straight flight at
+    the given launch direction. Positive = right, negative = left.
+
+    Args:
+        carry_yards:    Carry distance in yards.
+        side_angle_deg: Horizontal launch direction in degrees (field 3 from device).
+
+    Returns:
+        Side distance in yards (rounded to 1 dp).
+    """
+    return round(carry_yards * math.sin(math.radians(side_angle_deg)), 1)
 
 
 # ── Log tailer ────────────────────────────────────────────────────────────────
@@ -367,6 +409,8 @@ class App(tk.Tk):
             ("Spin Axis",     "carry"),
             ("Back Spin",     "total_dist"),
             ("Side Spin",     "side_dist"),
+            ("Carry",         "carry_yards"),
+            ("Side",          "side_dist_yards"),
             None,
             ("Club Path",     "club_speed"),
             ("Face to Target","attack_angle"),
@@ -519,6 +563,10 @@ class App(tk.Tk):
         # Convert ball speed m/s → mph to match simulator display
         merged["ball_speed_mph"] = round(merged["ball_speed"] * 2.237, 1)
 
+        # Estimate carry and side distance from ball speed + launch angle
+        merged["carry_yards"]     = _estimate_carry(merged["ball_speed"], merged["launch_angle"])
+        merged["side_dist_yards"] = _estimate_side(merged["carry_yards"], merged["side_angle"])
+
         # Validity suffix helper
         def v(key: str, unit: str = "") -> str:
             val   = merged[key]
@@ -536,6 +584,8 @@ class App(tk.Tk):
         self._fields["carry"].configure(text=v("carry", "°"))
         self._fields["total_dist"].configure(text=v("total_dist",            " rpm"))
         self._fields["side_dist"].configure(text=v("side_dist",              " rpm"))
+        self._fields["carry_yards"].configure(text=f'{merged["carry_yards"]} yds')
+        self._fields["side_dist_yards"].configure(text=f'{merged["side_dist_yards"]} yds')
         self._fields["club_speed"].configure(text=v("club_speed",            "°"))
         self._fields["attack_angle"].configure(text=v("attack_angle","°"))
         self._fields["club_path"].configure(text=v("club_path",     "°"))

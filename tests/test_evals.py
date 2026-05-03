@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from main import CLUB_NAMES, DEFAULT_PROMPT
+from main import CLUB_NAMES, DEFAULT_PROMPT, _estimate_carry, _estimate_side
 
 # ── Representative shot scenarios ─────────────────────────────────────────────
 # Each entry is a realistic complete shot dict as produced by _on_complete_shot.
@@ -31,6 +31,8 @@ PULL_HOOK = {
     "carry": -10.01, "carry_valid": True,
     "total_dist": 8252, "total_dist_valid": True,
     "side_dist": -1457.0, "side_dist_valid": True,
+    "carry_yards": _estimate_carry(41.23, 22.62),
+    "side_dist_yards": _estimate_side(_estimate_carry(41.23, 22.62), -5.42),
     "club_speed": -8.68, "club_speed_valid": True,
     "attack_angle": -4.6, "attack_angle_valid": True,
     "club_path": -6.42, "club_path_valid": True,
@@ -46,6 +48,8 @@ PUSH_SLICE = {
     "carry": 12.0, "carry_valid": True,
     "total_dist": 5416, "total_dist_valid": True,
     "side_dist": 1800.0, "side_dist_valid": True,
+    "carry_yards": _estimate_carry(49.1, 13.7),
+    "side_dist_yards": _estimate_side(_estimate_carry(49.1, 13.7), 5.5),
     "club_speed": 12.92, "club_speed_valid": True,
     "attack_angle": 6.21, "attack_angle_valid": True,
     "club_path": 6.64, "club_path_valid": True,
@@ -61,6 +65,8 @@ SOLID_STRIKE = {
     "carry": 9.55, "carry_valid": True,
     "total_dist": 8026, "total_dist_valid": True,
     "side_dist": 120.0, "side_dist_valid": True,
+    "carry_yards": _estimate_carry(38.71, 23.96),
+    "side_dist_yards": _estimate_side(_estimate_carry(38.71, 23.96), 0.5),
     "club_speed": 10.5, "club_speed_valid": True,
     "attack_angle": -3.2, "attack_angle_valid": True,
     "club_path": -0.5, "club_path_valid": True,
@@ -76,6 +82,8 @@ TOPPED_SHOT = {
     "carry": 2.5, "carry_valid": True,
     "total_dist": 800, "total_dist_valid": True,
     "side_dist": 50.0, "side_dist_valid": True,
+    "carry_yards": _estimate_carry(15.7, 2.1),
+    "side_dist_yards": _estimate_side(_estimate_carry(15.7, 2.1), 0.0),
     "club_speed": 9.0, "club_speed_valid": True,
     "attack_angle": 5.5, "attack_angle_valid": True,
     "club_path": -1.0, "club_path_valid": True,
@@ -91,6 +99,8 @@ FAT_SHOT = {
     "carry": 5.57, "carry_valid": True,
     "total_dist": 4517, "total_dist_valid": True,
     "side_dist": 441.0, "side_dist_valid": True,
+    "carry_yards": _estimate_carry(21.65, 24.79),
+    "side_dist_yards": _estimate_side(_estimate_carry(21.65, 24.79), 0.13),
     "club_speed": 4.37, "club_speed_valid": True,
     "attack_angle": -0.92, "attack_angle_valid": True,
     "club_path": -6.55, "club_path_valid": True,
@@ -106,6 +116,8 @@ INVALID_CLUB_DATA = {
     "carry": -0.06, "carry_valid": True,
     "total_dist": 5925, "total_dist_valid": True,
     "side_dist": -6.0, "side_dist_valid": True,
+    "carry_yards": _estimate_carry(30.34, 32.41),
+    "side_dist_yards": _estimate_side(_estimate_carry(30.34, 32.41), 0.78),
     "club_speed": -0.01, "club_speed_valid": False,
     "attack_angle": -0.01, "attack_angle_valid": False,
     "club_path": -0.01, "club_path_valid": False,
@@ -120,6 +132,8 @@ LEFT_HANDED = {
     "carry": 8.0, "carry_valid": True,
     "total_dist": 6100, "total_dist_valid": True,
     "side_dist": 300.0, "side_dist_valid": True,
+    "carry_yards": _estimate_carry(52.0, 11.5),
+    "side_dist_yards": _estimate_side(_estimate_carry(52.0, 11.5), 2.1),
     "club_speed": 15.1, "club_speed_valid": True,
     "attack_angle": -2.0, "attack_angle_valid": True,
     "club_path": 1.5, "club_path_valid": True,
@@ -135,6 +149,8 @@ UNKNOWN_CLUB = {
     "carry": 5.0, "carry_valid": True,
     "total_dist": 3500, "total_dist_valid": True,
     "side_dist": 0.0, "side_dist_valid": True,
+    "carry_yards": _estimate_carry(25.0, 20.0),
+    "side_dist_yards": _estimate_side(_estimate_carry(25.0, 20.0), 0.0),
     "club_speed": 8.0, "club_speed_valid": True,
     "attack_angle": -2.0, "attack_angle_valid": True,
     "club_path": 0.0, "club_path_valid": True,
@@ -161,6 +177,8 @@ REQUIRED_KEYS = {
     "carry",            # Spin Axis
     "total_dist",       # Back Spin component (rpm)
     "side_dist",        # Side Spin component (rpm)
+    "carry_yards",      # Estimated carry distance
+    "side_dist_yards",  # Estimated side distance
     "club_speed",       # Club Path (degrees)
     "attack_angle",     # Face to Target
     "club_path",        # Attack Angle

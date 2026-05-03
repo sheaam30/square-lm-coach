@@ -21,6 +21,8 @@ from main import (
     CLUB_NAMES,
     _HEARTBEAT_RE,
     LogTailer,
+    _estimate_carry,
+    _estimate_side,
     parse_club,
     parse_shot,
     parse_status,
@@ -644,3 +646,97 @@ class TestClubNames:
         assert num in CLUB_NAMES
         assert isinstance(CLUB_NAMES[num], str)
         assert len(CLUB_NAMES[num]) > 0
+
+
+# ── _estimate_carry ───────────────────────────────────────────────────────────
+
+class TestEstimateCarry:
+
+    def test_matches_user_reported_example(self):
+        """
+        User-verified: 21.65 m/s, 24.79° → simulator shows 39.9 yds.
+        Formula must stay within 0.5 yds of that reference.
+        """
+        carry = _estimate_carry(21.65, 24.79)
+        assert abs(carry - 39.9) < 0.5, f"Expected ~39.9 yds, got {carry}"
+
+    def test_zero_ball_speed_returns_zero(self):
+        assert _estimate_carry(0.0, 25.0) == 0.0
+
+    def test_zero_launch_angle_returns_zero(self):
+        assert _estimate_carry(40.0, 0.0) == 0.0
+
+    def test_negative_launch_angle_returns_zero(self):
+        assert _estimate_carry(40.0, -5.0) == 0.0
+
+    def test_higher_ball_speed_gives_more_carry(self):
+        slow = _estimate_carry(20.0, 20.0)
+        fast = _estimate_carry(40.0, 20.0)
+        assert fast > slow
+
+    def test_optimal_angle_45_gives_max_carry(self):
+        """45° should give more carry than 20° or 70° at the same speed."""
+        carry_20 = _estimate_carry(40.0, 20.0)
+        carry_45 = _estimate_carry(40.0, 45.0)
+        carry_70 = _estimate_carry(40.0, 70.0)
+        assert carry_45 > carry_20
+        assert carry_45 > carry_70
+
+    def test_complementary_angles_equal(self):
+        """30° and 60° are complementary so sin(60°)=sin(120°) — same carry."""
+        assert _estimate_carry(40.0, 30.0) == pytest.approx(_estimate_carry(40.0, 60.0), abs=0.5)
+
+    def test_returns_float(self):
+        assert isinstance(_estimate_carry(30.0, 20.0), float)
+
+    def test_always_non_negative(self):
+        for v in [5, 20, 40, 60]:
+            for a in [5, 15, 30, 45, 60]:
+                assert _estimate_carry(v, a) >= 0.0
+
+    @pytest.mark.parametrize("speed,angle,min_yds,max_yds", [
+        # chip: slow speed, high loft
+        (10.0, 30.0,  5,  30),
+        # mid-iron: 68 mph ball speed
+        (30.0, 20.0, 60, 130),
+        # driver: 110 mph ball speed
+        (49.1, 13.7, 100, 180),
+    ])
+    def test_carry_in_plausible_range(self, speed, angle, min_yds, max_yds):
+        carry = _estimate_carry(speed, angle)
+        assert min_yds <= carry <= max_yds, \
+            f"v={speed} m/s angle={angle}° → {carry} yds outside [{min_yds}, {max_yds}]"
+
+
+# ── _estimate_side ────────────────────────────────────────────────────────────
+
+class TestEstimateSide:
+
+    def test_zero_side_angle_returns_zero(self):
+        assert _estimate_side(100.0, 0.0) == 0.0
+
+    def test_positive_angle_gives_positive_side(self):
+        """Positive side angle → ball goes right → positive offset."""
+        assert _estimate_side(100.0, 5.0) > 0.0
+
+    def test_negative_angle_gives_negative_side(self):
+        """Negative side angle → ball goes left → negative offset."""
+        assert _estimate_side(100.0, -5.0) < 0.0
+
+    def test_larger_carry_gives_larger_offset(self):
+        """Same angle, more carry → more lateral displacement."""
+        short = _estimate_side(50.0, 10.0)
+        long_ = _estimate_side(150.0, 10.0)
+        assert long_ > short
+
+    def test_zero_carry_gives_zero_side(self):
+        assert _estimate_side(0.0, 10.0) == 0.0
+
+    def test_returns_float(self):
+        assert isinstance(_estimate_side(100.0, 5.0), float)
+
+    def test_fat_shot_nearly_straight(self):
+        """0.13° side angle on a ~40 yd shot should be < 0.2 yds offline."""
+        carry = _estimate_carry(21.65, 24.79)
+        side  = _estimate_side(carry, 0.13)
+        assert abs(side) < 0.2
