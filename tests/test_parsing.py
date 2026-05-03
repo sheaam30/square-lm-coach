@@ -328,9 +328,9 @@ class TestParseStatus:
         assert CLUB_NAMES[r["club_num"]] == "Driver"
 
     def test_club_num_maps_to_putter(self):
-        line = " RX : GetStatus Ready, club_sel 16, club_num 16, handed 0, sensor 1"
+        line = " RX : GetStatus Ready, club_sel 14, club_num 14, handed 0, sensor 1"
         r = parse_status(line)
-        assert r["club_num"] == 16
+        assert r["club_num"] == 14
         assert CLUB_NAMES[r["club_num"]] == "Putter"
 
     def test_all_getstatus_states_match(self):
@@ -618,19 +618,22 @@ class TestLogTailerNullStripping:
 
 class TestClubNames:
 
-    def test_all_sixteen_clubs_defined(self):
-        assert len(CLUB_NAMES) == 16
+    def test_fourteen_clubs_defined(self):
+        assert len(CLUB_NAMES) == 14
 
     def test_club_1_is_driver(self):
         assert CLUB_NAMES[1] == "Driver"
 
-    def test_club_16_is_putter(self):
-        assert CLUB_NAMES[16] == "Putter"
+    def test_club_14_is_putter(self):
+        assert CLUB_NAMES[14] == "Putter"
 
-    def test_club_12_is_pw(self):
-        assert CLUB_NAMES[12] == "PW"
+    def test_club_9_is_9iron(self):
+        assert CLUB_NAMES[9] == "9-Iron"
 
-    @pytest.mark.parametrize("num", range(1, 17))
+    def test_club_10_is_pw(self):
+        assert CLUB_NAMES[10] == "PW"
+
+    @pytest.mark.parametrize("num", range(1, 15))
     def test_all_club_numbers_have_names(self, num):
         assert num in CLUB_NAMES
         assert isinstance(CLUB_NAMES[num], str)
