@@ -307,11 +307,11 @@ class TestPromptCharacteristics:
         lower = prompt.lower()
         assert "golf" in lower or "instructor" in lower or "coach" in lower
 
-    def test_prompt_requests_tips_or_feedback(self):
+    def test_prompt_requests_actionable_output(self):
         """Default prompt must ask for actionable output."""
         prompt = render(DEFAULT_PROMPT, SOLID_STRIKE)
         lower = prompt.lower()
-        assert any(word in lower for word in ("tip", "feedback", "feel", "improve", "provide"))
+        assert any(word in lower for word in ("tip", "feedback", "feel", "improve", "provide", "fix", "correct"))
 
     def test_attack_angle_note_present(self):
         """Attack angle direction label should appear in the rendered prompt."""

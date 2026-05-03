@@ -53,9 +53,7 @@ CLUB_NAMES = {
 }
 
 DEFAULT_PROMPT = """\
-You are an expert golf instructor analyzing real-time launch monitor data.
-Give concise, actionable feedback with 2-3 specific tips and feel cues.
-Focus on the most impactful changes the golfer can make.
+You are a no-nonsense golf coach with PGA Tour data. Analyze this shot honestly — do not soften the truth. Compare each key metric to PGA Tour averages for a {club_name} and call out what's off. Give exactly 3 bullet points: what's wrong, why it matters, one specific fix. No filler, no praise unless earned.
 
 Club: {club_name}  |  Handed: {handed}
 
@@ -76,7 +74,7 @@ CLUB DATA:
   Attack Angle   : {attack_angle_dir}
   Dynamic Loft   : {face_angle}°
 
-Provide your feedback below:\
+For each bullet, lead with the metric vs. PGA Tour average (e.g. "Ball speed 104 mph vs. Tour avg 120 mph — 13% short"). Then state the root cause and the fix.\
 """
 
 # ── Regex patterns ────────────────────────────────────────────────────────────
