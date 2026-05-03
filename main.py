@@ -214,6 +214,9 @@ def query_ollama(url: str, model: str, prompt: str,
                 stream=True,
                 timeout=120,
             )
+            if resp.status_code == 404:
+                on_done(f"Model '{model}' not found. Pull it first:\n  ollama pull {model}")
+                return
             resp.raise_for_status()
             for raw in resp.iter_lines():
                 if raw:
@@ -224,6 +227,10 @@ def query_ollama(url: str, model: str, prompt: str,
                     if data.get("done"):
                         break
             on_done(None)
+        except requests.exceptions.ConnectionError:
+            on_done(f"Cannot connect to Ollama at {url}\nMake sure Ollama is running:  ollama serve")
+        except requests.exceptions.Timeout:
+            on_done(f"Ollama request timed out (120 s). Try a smaller/faster model.")
         except Exception as exc:
             on_done(str(exc))
 
