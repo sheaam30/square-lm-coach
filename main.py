@@ -53,7 +53,7 @@ Focus on the most impactful changes the golfer can make.
 Club: {club_name}  |  Handed: {handed}
 
 SHOT DATA:
-  Ball Speed   : {ball_speed} m/s
+  Ball Speed   : {ball_speed_mph} mph
   Launch Angle : {launch_angle}°
   Side Angle   : {side_angle}°
   Backspin     : {backspin} rpm
@@ -461,8 +461,11 @@ class App(tk.Tk):
 
         # Enrich with device status
         club_num = self._last_status.get("club_num", 0)
-        merged["club_name"] = CLUB_NAMES.get(club_num, f"Club #{club_num}")
-        merged["handed"]    = self._last_status.get("handed", "Right")
+        merged["club_name"]      = CLUB_NAMES.get(club_num, f"Club #{club_num}")
+        merged["handed"]         = self._last_status.get("handed", "Right")
+
+        # Convert ball speed m/s → mph to match simulator display
+        merged["ball_speed_mph"] = round(merged["ball_speed"] * 2.237, 1)
 
         # Validity suffix helper
         def v(key: str, unit: str = "") -> str:
@@ -474,7 +477,7 @@ class App(tk.Tk):
         # Update shot panel
         self._fields["club_name"].configure(text=merged["club_name"])
         self._fields["handed"].configure(text=merged["handed"])
-        self._fields["ball_speed"].configure(text=v("ball_speed",   " m/s"))
+        self._fields["ball_speed"].configure(text=v("ball_speed_mph", " mph"))
         self._fields["launch_angle"].configure(text=f"{merged['launch_angle']}°")
         self._fields["side_angle"].configure(text=f"{merged['side_angle']}°")
         self._fields["backspin"].configure(text=v("backspin",       " rpm"))

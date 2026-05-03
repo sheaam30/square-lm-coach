@@ -25,7 +25,7 @@ from main import CLUB_NAMES, DEFAULT_PROMPT
 PULL_HOOK = {
     # Out-to-in path, closed face → pull hook
     "club_name": "7-Iron", "handed": "Right",
-    "ball_speed": 41.23, "ball_speed_valid": True,
+    "ball_speed": 41.23, "ball_speed_mph": round(41.23 * 2.237, 1), "ball_speed_valid": True,
     "launch_angle": 22.62, "side_angle": -5.42,
     "backspin": 8379, "backspin_valid": True,
     "carry": -10.01, "carry_valid": True,
@@ -40,7 +40,7 @@ PULL_HOOK = {
 PUSH_SLICE = {
     # In-to-out path, open face → push slice
     "club_name": "Driver", "handed": "Right",
-    "ball_speed": 49.1, "ball_speed_valid": True,
+    "ball_speed": 49.1, "ball_speed_mph": round(49.1 * 2.237, 1), "ball_speed_valid": True,
     "launch_angle": 13.7, "side_angle": 5.5,
     "backspin": 3200, "backspin_valid": True,
     "carry": 12.0, "carry_valid": True,
@@ -55,7 +55,7 @@ PUSH_SLICE = {
 SOLID_STRIKE = {
     # Square path/face, good numbers → solid iron shot
     "club_name": "5-Iron", "handed": "Right",
-    "ball_speed": 38.71, "ball_speed_valid": True,
+    "ball_speed": 38.71, "ball_speed_mph": round(38.71 * 2.237, 1), "ball_speed_valid": True,
     "launch_angle": 23.96, "side_angle": 0.5,
     "backspin": 5800, "backspin_valid": True,
     "carry": 9.55, "carry_valid": True,
@@ -70,7 +70,7 @@ SOLID_STRIKE = {
 TOPPED_SHOT = {
     # Low ball speed, high backspin anomaly, tiny carry
     "club_name": "5-Iron", "handed": "Right",
-    "ball_speed": 15.7, "ball_speed_valid": True,
+    "ball_speed": 15.7, "ball_speed_mph": round(15.7 * 2.237, 1), "ball_speed_valid": True,
     "launch_angle": 2.1, "side_angle": 0.0,
     "backspin": 1200, "backspin_valid": True,
     "carry": 2.5, "carry_valid": True,
@@ -85,7 +85,7 @@ TOPPED_SHOT = {
 FAT_SHOT = {
     # Steep attack angle, low ball speed relative to club speed
     "club_name": "7-Iron", "handed": "Right",
-    "ball_speed": 21.65, "ball_speed_valid": True,
+    "ball_speed": 21.65, "ball_speed_mph": round(21.65 * 2.237, 1), "ball_speed_valid": True,
     "launch_angle": 24.79, "side_angle": 0.13,
     "backspin": 4538, "backspin_valid": True,
     "carry": 5.57, "carry_valid": True,
@@ -100,7 +100,7 @@ FAT_SHOT = {
 INVALID_CLUB_DATA = {
     # Club sensor failure — all -0.01 / False
     "club_name": "PW", "handed": "Right",
-    "ball_speed": 30.34, "ball_speed_valid": True,
+    "ball_speed": 30.34, "ball_speed_mph": round(30.34 * 2.237, 1), "ball_speed_valid": True,
     "launch_angle": 32.41, "side_angle": 0.78,
     "backspin": 5925, "backspin_valid": True,
     "carry": -0.06, "carry_valid": True,
@@ -114,7 +114,7 @@ INVALID_CLUB_DATA = {
 
 LEFT_HANDED = {
     "club_name": "Driver", "handed": "Left",
-    "ball_speed": 52.0, "ball_speed_valid": True,
+    "ball_speed": 52.0, "ball_speed_mph": round(52.0 * 2.237, 1), "ball_speed_valid": True,
     "launch_angle": 11.5, "side_angle": 2.1,
     "backspin": 2800, "backspin_valid": True,
     "carry": 8.0, "carry_valid": True,
@@ -129,7 +129,7 @@ LEFT_HANDED = {
 UNKNOWN_CLUB = {
     # club_num not in CLUB_NAMES → fallback label
     "club_name": "Club #99", "handed": "Right",
-    "ball_speed": 25.0, "ball_speed_valid": True,
+    "ball_speed": 25.0, "ball_speed_mph": round(25.0 * 2.237, 1), "ball_speed_valid": True,
     "launch_angle": 20.0, "side_angle": 0.0,
     "backspin": 4000, "backspin_valid": True,
     "carry": 5.0, "carry_valid": True,
@@ -155,7 +155,7 @@ ALL_SCENARIOS = [
 # Required format keys in the default prompt
 REQUIRED_KEYS = {
     "club_name", "handed",
-    "ball_speed", "launch_angle", "side_angle",
+    "ball_speed_mph", "launch_angle", "side_angle",
     "backspin", "carry", "total_dist", "side_dist",
     "club_speed", "attack_angle", "club_path", "face_angle",
 }
@@ -216,7 +216,7 @@ class TestPromptTemplate:
     def test_numeric_values_appear_in_prompt(self, name, data):
         """Key numeric values must be visibly present in the rendered prompt."""
         prompt = render(DEFAULT_PROMPT, data)
-        for key in ("ball_speed", "launch_angle", "backspin"):
+        for key in ("ball_speed_mph", "launch_angle", "backspin"):
             assert str(data[key]) in prompt, \
                 f"Expected {key}={data[key]} to appear in prompt for {name!r}"
 
