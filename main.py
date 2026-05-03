@@ -53,7 +53,15 @@ CLUB_NAMES = {
 }
 
 DEFAULT_PROMPT = """\
-You are a no-nonsense golf coach with PGA Tour data. Analyze this shot honestly — do not soften the truth. Compare each key metric to PGA Tour averages for a {club_name} and call out what's off. Give exactly 3 bullet points: what's wrong, why it matters, one specific fix. No filler, no praise unless earned.
+You are a professional golf coach and data analyst. Evaluate this shot using the launch monitor data below and compare it directly to PGA Tour averages for a {club_name}.
+
+Guidelines:
+- Be concise, direct, and specific. No fluff or filler.
+- Always compare my numbers to PGA Tour averages and clearly state the difference.
+- Call out any metric that is below or above Tour average and explain what it means for performance.
+- Prioritize the biggest gaps first (the stats hurting me the most).
+- Speak like a coach: firm, practical, focused on improvement — not casual or robotic.
+- If something is good, acknowledge it briefly and move on. If something is bad, be clear and constructive.
 
 Club: {club_name}  |  Handed: {handed}
 
@@ -74,7 +82,12 @@ CLUB DATA:
   Attack Angle   : {attack_angle_dir}
   Dynamic Loft   : {face_angle}°
 
-For each bullet, lead with the metric vs. PGA Tour average (e.g. "Ball speed 104 mph vs. Tour avg 120 mph — 13% short"). Then state the root cause and the fix.\
+Analysis structure:
+1. Quick summary (2-3 sentences): What's holding me back most.
+2. Stat comparison: For each key metric show → My stat vs PGA Tour average → Difference → Brief impact.
+3. Key weaknesses (2-4): What they are and WHY each matters for scoring.
+4. Coaching adjustments: Specific, actionable fix for each weakness (mechanics, drills, or strategy).
+5. Priority plan: Rank what I should work on first, second, third.\
 """
 
 # ── Regex patterns ────────────────────────────────────────────────────────────
@@ -652,7 +665,11 @@ class App(tk.Tk):
 
         # Enrich with device status
         club_sel = self._last_status.get("club_sel", 0)
-        merged["club_name"]      = CLUB_NAMES.get(club_sel, f"Club #{club_sel}")
+        club_num = self._last_status.get("club_num", 0)
+        club_name = CLUB_NAMES.get(club_sel, f"Club #{club_sel}")
+        merged["club_name"]      = club_name
+        merged["club_sel_raw"]   = club_sel   # exposed for debugging
+        merged["club_num_raw"]   = club_num
         merged["handed"]         = self._last_status.get("handed", "Right")
 
         # Convert ball speed m/s → mph to match simulator display
@@ -676,7 +693,8 @@ class App(tk.Tk):
             return text if valid else f"{text} (?)"
 
         # Update shot panel
-        self._fields["club_name"].configure(text=merged["club_name"])
+        self._fields["club_name"].configure(
+            text=f"{merged['club_name']} (sel:{merged['club_sel_raw']})")
         self._fields["handed"].configure(text=merged["handed"])
         self._fields["ball_speed"].configure(text=v("ball_speed_mph", " mph"))
         self._fields["launch_angle"].configure(text=f"{merged['launch_angle']}°")
