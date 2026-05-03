@@ -22,7 +22,7 @@ from queue import Empty, Queue
 
 import requests
 import tkinter as tk
-from tkinter import filedialog, scrolledtext, ttk
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 DEFAULT_LOG_PATH = os.path.join(
@@ -354,6 +354,7 @@ class App(tk.Tk):
         self._llm_busy        = False
         self._llm_raw         = ""     # accumulated LLM response for post-clean render
         self._remain_dist     = None   # last known remaining distance to hole (yds)
+        self._last_shot_data  = None   # merged shot dict from most recent complete shot
 
         _style(ttk.Style(self))
         self._build_ui(log_path, model, ollama_url)
@@ -400,7 +401,10 @@ class App(tk.Tk):
         left.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
         left.pack_propagate(False)
 
-        ttk.Label(left, text="LAST SHOT", style="Header.TLabel").pack(anchor=tk.W, pady=(0, 8))
+        shot_header = ttk.Frame(left)
+        shot_header.pack(fill=tk.X, pady=(0, 8))
+        ttk.Label(shot_header, text="LAST SHOT", style="Header.TLabel").pack(side=tk.LEFT)
+        ttk.Button(shot_header, text="Export", command=self._export_shot).pack(side=tk.RIGHT)
 
         self._fields: dict[str, ttk.Label] = {}
         rows = [
@@ -482,6 +486,31 @@ class App(tk.Tk):
     def _reset_prompt(self):
         self._prompt_editor.delete("1.0", tk.END)
         self._prompt_editor.insert(tk.END, DEFAULT_PROMPT)
+
+    def _export_shot(self):
+        """Save the last shot's raw data and AI feedback to a JSON file."""
+        if not self._last_shot_data:
+            messagebox.showinfo("Export", "No shot data yet — hit a shot first.")
+            return
+
+        path = filedialog.asksaveasfilename(
+            title="Export shot data",
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            initialfile=f"shot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+        )
+        if not path:
+            return
+
+        feedback_text = self._feedback.get("1.0", tk.END).strip()
+        export = {
+            "timestamp": datetime.now().isoformat(),
+            "shot": {k: v for k, v in self._last_shot_data.items()},
+            "ai_feedback": feedback_text,
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(export, f, indent=2)
+        messagebox.showinfo("Export", f"Shot data saved to:\n{path}")
 
     # ── Tailer management ─────────────────────────────────────────────────
 
@@ -595,6 +624,9 @@ class App(tk.Tk):
         self._fields["attack_angle"].configure(text=v("attack_angle","°"))
         self._fields["club_path"].configure(text=v("club_path",     "°"))
         self._fields["face_angle"].configure(text=v("face_angle",   "°"))
+
+        # Store for export
+        self._last_shot_data = merged
 
         # Query LLM (skip if already processing a shot)
         if not self._llm_busy:
