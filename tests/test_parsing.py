@@ -547,6 +547,8 @@ class TestLogTailerNullStripping:
             assert found, "Timed out waiting for shot_data event"
         finally:
             tailer.stop()
+            if tailer._thread:
+                tailer._thread.join(timeout=2.0)
             os.unlink(path)
 
     def test_null_padded_file_with_appended_shot(self):
@@ -587,6 +589,8 @@ class TestLogTailerNullStripping:
             assert got_club, "Did not receive club_data event"
         finally:
             tailer.stop()
+            if tailer._thread:
+                tailer._thread.join(timeout=2.0)
             os.unlink(path)
 
     def test_file_not_found_retries(self):
