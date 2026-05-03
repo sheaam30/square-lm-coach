@@ -33,9 +33,9 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        # Trim unused stdlib heavyweights to reduce exe size
+        # Trim unused stdlib heavyweights to reduce exe size.
+        # NOTE: do NOT exclude 'email' — urllib3 (inside requests) requires it.
         'unittest',
-        'email',
         'html',
         'http.server',
         'xmlrpc',
