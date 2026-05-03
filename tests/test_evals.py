@@ -30,9 +30,7 @@ PULL_HOOK = {
     "backspin": 8379, "backspin_valid": True,
     "carry": -10.01, "carry_valid": True,
     "total_dist": 8252, "total_dist_valid": True,
-    "carry_yards": round(8252 / 91.44, 1), "carry_yards_valid": True,
     "side_dist": -1457.0, "side_dist_valid": True,
-    "side_dist_yards": round(-1457.0 / 91.44, 1), "side_dist_yards_valid": True,
     "club_speed": -8.68, "club_speed_valid": True,
     "attack_angle": -4.6, "attack_angle_valid": True,
     "club_path": -6.42, "club_path_valid": True,
@@ -47,9 +45,7 @@ PUSH_SLICE = {
     "backspin": 3200, "backspin_valid": True,
     "carry": 12.0, "carry_valid": True,
     "total_dist": 5416, "total_dist_valid": True,
-    "carry_yards": round(5416 / 91.44, 1), "carry_yards_valid": True,
     "side_dist": 1800.0, "side_dist_valid": True,
-    "side_dist_yards": round(1800.0 / 91.44, 1), "side_dist_yards_valid": True,
     "club_speed": 12.92, "club_speed_valid": True,
     "attack_angle": 6.21, "attack_angle_valid": True,
     "club_path": 6.64, "club_path_valid": True,
@@ -64,9 +60,7 @@ SOLID_STRIKE = {
     "backspin": 5800, "backspin_valid": True,
     "carry": 9.55, "carry_valid": True,
     "total_dist": 8026, "total_dist_valid": True,
-    "carry_yards": round(8026 / 91.44, 1), "carry_yards_valid": True,
     "side_dist": 120.0, "side_dist_valid": True,
-    "side_dist_yards": round(120.0 / 91.44, 1), "side_dist_yards_valid": True,
     "club_speed": 10.5, "club_speed_valid": True,
     "attack_angle": -3.2, "attack_angle_valid": True,
     "club_path": -0.5, "club_path_valid": True,
@@ -81,9 +75,7 @@ TOPPED_SHOT = {
     "backspin": 1200, "backspin_valid": True,
     "carry": 2.5, "carry_valid": True,
     "total_dist": 800, "total_dist_valid": True,
-    "carry_yards": round(800 / 91.44, 1), "carry_yards_valid": True,
     "side_dist": 50.0, "side_dist_valid": True,
-    "side_dist_yards": round(50.0 / 91.44, 1), "side_dist_yards_valid": True,
     "club_speed": 9.0, "club_speed_valid": True,
     "attack_angle": 5.5, "attack_angle_valid": True,
     "club_path": -1.0, "club_path_valid": True,
@@ -98,9 +90,7 @@ FAT_SHOT = {
     "backspin": 4538, "backspin_valid": True,
     "carry": 5.57, "carry_valid": True,
     "total_dist": 4517, "total_dist_valid": True,
-    "carry_yards": round(4517 / 91.44, 1), "carry_yards_valid": True,
     "side_dist": 441.0, "side_dist_valid": True,
-    "side_dist_yards": round(441.0 / 91.44, 1), "side_dist_yards_valid": True,
     "club_speed": 4.37, "club_speed_valid": True,
     "attack_angle": -0.92, "attack_angle_valid": True,
     "club_path": -6.55, "club_path_valid": True,
@@ -115,9 +105,7 @@ INVALID_CLUB_DATA = {
     "backspin": 5925, "backspin_valid": True,
     "carry": -0.06, "carry_valid": True,
     "total_dist": 5925, "total_dist_valid": True,
-    "carry_yards": round(5925 / 91.44, 1), "carry_yards_valid": True,
     "side_dist": -6.0, "side_dist_valid": True,
-    "side_dist_yards": round(-6.0 / 91.44, 1), "side_dist_yards_valid": True,
     "club_speed": -0.01, "club_speed_valid": False,
     "attack_angle": -0.01, "attack_angle_valid": False,
     "club_path": -0.01, "club_path_valid": False,
@@ -131,9 +119,7 @@ LEFT_HANDED = {
     "backspin": 2800, "backspin_valid": True,
     "carry": 8.0, "carry_valid": True,
     "total_dist": 6100, "total_dist_valid": True,
-    "carry_yards": round(6100 / 91.44, 1), "carry_yards_valid": True,
     "side_dist": 300.0, "side_dist_valid": True,
-    "side_dist_yards": round(300.0 / 91.44, 1), "side_dist_yards_valid": True,
     "club_speed": 15.1, "club_speed_valid": True,
     "attack_angle": -2.0, "attack_angle_valid": True,
     "club_path": 1.5, "club_path_valid": True,
@@ -148,9 +134,7 @@ UNKNOWN_CLUB = {
     "backspin": 4000, "backspin_valid": True,
     "carry": 5.0, "carry_valid": True,
     "total_dist": 3500, "total_dist_valid": True,
-    "carry_yards": round(3500 / 91.44, 1), "carry_yards_valid": True,
     "side_dist": 0.0, "side_dist_valid": True,
-    "side_dist_yards": round(0.0 / 91.44, 1), "side_dist_yards_valid": True,
     "club_speed": 8.0, "club_speed_valid": True,
     "attack_angle": -2.0, "attack_angle_valid": True,
     "club_path": 0.0, "club_path_valid": True,
@@ -175,8 +159,8 @@ REQUIRED_KEYS = {
     "side_angle",       # Direction
     "backspin",         # Spin Rate
     "carry",            # Spin Axis
-    "carry_yards",      # Carry distance in yards
-    "side_dist_yards",  # Side distance in yards
+    "total_dist",       # Back Spin component (rpm)
+    "side_dist",        # Side Spin component (rpm)
     "club_speed",       # Club Path (degrees)
     "attack_angle",     # Face to Target
     "club_path",        # Attack Angle

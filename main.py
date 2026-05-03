@@ -59,8 +59,8 @@ SHOT DATA:
   Direction    : {side_angle}°
   Spin Rate    : {backspin} rpm
   Spin Axis    : {carry}°
-  Carry        : {carry_yards} yds
-  Side Dist    : {side_dist_yards} yds
+  Back Spin    : {total_dist} rpm
+  Side Spin    : {side_dist} rpm
 
 CLUB DATA:
   Club Path      : {club_speed}°
@@ -92,6 +92,8 @@ _CLUB_RE = re.compile(
 )
 
 _HEARTBEAT_RE = re.compile(r"^71000000")
+
+_REMAIN_RE = re.compile(r"PlayerController:AutoClub:: remainDistance\(([\d.]+)\)")
 
 _STATUS_RE = re.compile(
     r"RX : GetStatus \w+, club_sel (\d+), club_num (\d+), handed (\d+)"
@@ -200,6 +202,10 @@ class LogTailer:
         status = parse_status(line)
         if status:
             self.queue.put(("status_data", status))
+            return
+        m = _REMAIN_RE.search(line)
+        if m:
+            self.queue.put(("remain_dist", float(m.group(1))))
 
 
 # ── Ollama client ─────────────────────────────────────────────────────────────
@@ -300,6 +306,7 @@ class App(tk.Tk):
         self._last_heartbeat  = 0.0
         self._llm_busy        = False
         self._llm_raw         = ""     # accumulated LLM response for post-clean render
+        self._remain_dist     = None   # last known remaining distance to hole (yds)
 
         _style(ttk.Style(self))
         self._build_ui(log_path, model, ollama_url)
@@ -358,13 +365,15 @@ class App(tk.Tk):
             ("Direction",     "side_angle"),
             ("Spin Rate",     "backspin"),
             ("Spin Axis",     "carry"),
-            ("Carry",         "carry_yards"),
-            ("Side Dist",     "side_dist_yards"),
+            ("Back Spin",     "total_dist"),
+            ("Side Spin",     "side_dist"),
             None,
             ("Club Path",     "club_speed"),
             ("Face to Target","attack_angle"),
             ("Attack Angle",  "club_path"),
             ("Dynamic Loft",  "face_angle"),
+            None,
+            ("To Hole",       "remain_dist"),
         ]
         for item in rows:
             if item is None:
@@ -469,6 +478,10 @@ class App(tk.Tk):
             if self._pending_shot:
                 self._on_complete_shot(self._pending_shot, data)
                 self._pending_shot = None
+        elif event == "remain_dist":
+            self._remain_dist = data
+            if "remain_dist" in self._fields:
+                self._fields["remain_dist"].configure(text=f"{data:.1f} yds")
         elif event == "llm_token":
             self._llm_raw += data
             self._feedback.config(state=tk.NORMAL)
@@ -506,12 +519,6 @@ class App(tk.Tk):
         # Convert ball speed m/s → mph to match simulator display
         merged["ball_speed_mph"] = round(merged["ball_speed"] * 2.237, 1)
 
-        # Convert carry/side distance cm → yards to match simulator display
-        merged["carry_yards"]          = round(merged["total_dist"] / 91.44, 1)
-        merged["carry_yards_valid"]    = merged.get("total_dist_valid", True)
-        merged["side_dist_yards"]      = round(merged["side_dist"] / 91.44, 1)
-        merged["side_dist_yards_valid"]= merged.get("side_dist_valid", True)
-
         # Validity suffix helper
         def v(key: str, unit: str = "") -> str:
             val   = merged[key]
@@ -526,9 +533,9 @@ class App(tk.Tk):
         self._fields["launch_angle"].configure(text=f"{merged['launch_angle']}°")
         self._fields["side_angle"].configure(text=f"{merged['side_angle']}°")
         self._fields["backspin"].configure(text=v("backspin",       " rpm"))
-        self._fields["carry"].configure(text=v("carry"))
-        self._fields["carry_yards"].configure(text=v("carry_yards",          " yds"))
-        self._fields["side_dist_yards"].configure(text=v("side_dist_yards",  " yds"))
+        self._fields["carry"].configure(text=v("carry", "°"))
+        self._fields["total_dist"].configure(text=v("total_dist",            " rpm"))
+        self._fields["side_dist"].configure(text=v("side_dist",              " rpm"))
         self._fields["club_speed"].configure(text=v("club_speed",            "°"))
         self._fields["attack_angle"].configure(text=v("attack_angle","°"))
         self._fields["club_path"].configure(text=v("club_path",     "°"))
