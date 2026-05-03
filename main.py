@@ -34,22 +34,22 @@ DEFAULT_MODEL      = "llama3.2"
 HEARTBEAT_TIMEOUT  = 10  # seconds before dot turns amber
 
 # Club number → name mapping (adjust to match your device's numbering)
+# Square Golf SQG device club_sel mapping (12-club bag, no long irons 3I-5I).
+# club_sel=6 → "8-Iron" is confirmed by user data; positions 1-3 are woods,
+# 4-5 are mid-irons (6I, 7I), 6-11 are short irons/wedges, 12=Putter.
 CLUB_NAMES = {
     1:  "Driver",
     2:  "3-Wood",
     3:  "5-Wood",
-    4:  "3-Iron",
-    5:  "4-Iron",
-    6:  "5-Iron",
-    7:  "6-Iron",
-    8:  "7-Iron",
-    9:  "8-Iron",
-    10: "9-Iron",
-    11: "PW",
-    12: "GW",
-    13: "SW",
-    14: "LW",
-    15: "Putter",
+    4:  "6-Iron",
+    5:  "7-Iron",
+    6:  "8-Iron",
+    7:  "9-Iron",
+    8:  "PW",
+    9:  "GW",
+    10: "SW",
+    11: "LW",
+    12: "Putter",
 }
 
 DEFAULT_PROMPT = """\
@@ -639,8 +639,8 @@ class App(tk.Tk):
         merged = {**shot, **club}
 
         # Enrich with device status
-        club_num = self._last_status.get("club_num", 0)
-        merged["club_name"]      = CLUB_NAMES.get(club_num, f"Club #{club_num}")
+        club_sel = self._last_status.get("club_sel", 0)
+        merged["club_name"]      = CLUB_NAMES.get(club_sel, f"Club #{club_sel}")
         merged["handed"]         = self._last_status.get("handed", "Right")
 
         # Convert ball speed m/s → mph to match simulator display

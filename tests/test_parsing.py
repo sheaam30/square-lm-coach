@@ -323,17 +323,24 @@ class TestParseStatus:
         r = parse_status(STATUS_LINE_LEFT)
         assert r["handed"] == "Left"
 
-    def test_club_num_maps_to_driver(self):
+    def test_club_sel_maps_to_driver(self):
         line = " RX : GetStatus Ready, club_sel 1, club_num 1, handed 0, sensor 1"
         r = parse_status(line)
-        assert r["club_num"] == 1
-        assert CLUB_NAMES[r["club_num"]] == "Driver"
+        assert r["club_sel"] == 1
+        assert CLUB_NAMES[r["club_sel"]] == "Driver"
 
-    def test_club_num_maps_to_putter(self):
-        line = " RX : GetStatus Ready, club_sel 15, club_num 15, handed 0, sensor 1"
+    def test_club_sel_maps_to_putter(self):
+        line = " RX : GetStatus Ready, club_sel 12, club_num 15, handed 0, sensor 1"
         r = parse_status(line)
-        assert r["club_num"] == 15
-        assert CLUB_NAMES[r["club_num"]] == "Putter"
+        assert r["club_sel"] == 12
+        assert CLUB_NAMES[r["club_sel"]] == "Putter"
+
+    def test_club_sel_6_maps_to_8iron(self):
+        """club_sel=6 confirmed by user data to be 8-Iron."""
+        line = " RX : GetStatus Ready, club_sel 6, club_num 9, handed 0, sensor 1"
+        r = parse_status(line)
+        assert r["club_sel"] == 6
+        assert CLUB_NAMES[r["club_sel"]] == "8-Iron"
 
     def test_all_getstatus_states_match(self):
         """Parser must match regardless of state word (Detect/Ready/None)."""
@@ -620,28 +627,29 @@ class TestLogTailerNullStripping:
 
 class TestClubNames:
 
-    def test_fifteen_clubs_defined(self):
-        assert len(CLUB_NAMES) == 15
+    def test_twelve_clubs_defined(self):
+        assert len(CLUB_NAMES) == 12
 
     def test_club_1_is_driver(self):
         assert CLUB_NAMES[1] == "Driver"
 
-    def test_club_15_is_putter(self):
-        assert CLUB_NAMES[15] == "Putter"
+    def test_club_12_is_putter(self):
+        assert CLUB_NAMES[12] == "Putter"
 
-    def test_club_14_is_lw(self):
-        assert CLUB_NAMES[14] == "LW"
+    def test_club_11_is_lw(self):
+        assert CLUB_NAMES[11] == "LW"
 
-    def test_club_9_is_8iron(self):
-        assert CLUB_NAMES[9] == "8-Iron"
+    def test_club_6_is_8iron(self):
+        """club_sel=6 confirmed by user data to correspond to 8-Iron."""
+        assert CLUB_NAMES[6] == "8-Iron"
 
-    def test_club_10_is_9iron(self):
-        assert CLUB_NAMES[10] == "9-Iron"
+    def test_club_7_is_9iron(self):
+        assert CLUB_NAMES[7] == "9-Iron"
 
-    def test_club_11_is_pw(self):
-        assert CLUB_NAMES[11] == "PW"
+    def test_club_8_is_pw(self):
+        assert CLUB_NAMES[8] == "PW"
 
-    @pytest.mark.parametrize("num", range(1, 16))
+    @pytest.mark.parametrize("num", range(1, 13))
     def test_all_club_numbers_have_names(self, num):
         assert num in CLUB_NAMES
         assert isinstance(CLUB_NAMES[num], str)
