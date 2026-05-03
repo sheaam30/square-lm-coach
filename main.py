@@ -34,22 +34,17 @@ DEFAULT_MODEL      = "llama3.2"
 HEARTBEAT_TIMEOUT  = 10  # seconds before dot turns amber
 
 # Club number → name mapping (adjust to match your device's numbering)
-# Square Golf SQG device club_sel mapping (12-club bag, no long irons 3I-5I).
-# club_sel=6 → "8-Iron" is confirmed by user data; positions 1-3 are woods,
-# 4-5 are mid-irons (6I, 7I), 6-11 are short irons/wedges, 12=Putter.
+# Square Golf SQG device club_sel mapping.
+# club_sel=6 → "SW" confirmed by user; all 1091 log entries had club_sel=6.
+# Classic 7-club beginner bag (the most common Square Golf starter config):
 CLUB_NAMES = {
     1:  "Driver",
     2:  "3-Wood",
-    3:  "5-Wood",
-    4:  "6-Iron",
-    5:  "7-Iron",
-    6:  "8-Iron",
-    7:  "9-Iron",
-    8:  "PW",
-    9:  "GW",
-    10: "SW",
-    11: "LW",
-    12: "Putter",
+    3:  "5-Iron",
+    4:  "7-Iron",
+    5:  "9-Iron",
+    6:  "SW",
+    7:  "Putter",
 }
 
 DEFAULT_PROMPT = """\
@@ -161,33 +156,61 @@ def parse_status(line: str):
 
 
 # ── Carry estimation ─────────────────────────────────────────────────────────
-def _estimate_carry(ball_speed_ms: float, launch_deg: float) -> float:
+def _estimate_carry(ball_speed_ms: float, launch_deg: float,
+                    spin_rpm: float = 5000) -> float:
     """
-    Estimate carry distance in yards using simple projectile motion.
+    Estimate carry distance in yards using a physics simulation with drag and lift.
 
-    Estimates carry using projectile motion with an empirical aerodynamic
-    correction factor calibrated to two verified data points:
-      slow shot: 21.65 m/s / 24.79° → 39.9 yds
-      fast shot: 46.98 m/s / 15.23° → 145.4 yds
+    Uses Euler integration (dt=0.01 s) with aerodynamic forces:
+      - Drag: 0.5 * rho * Cd * A * v²
+      - Lift: 0.5 * rho * Cl * A * v²
+
+    Cl (dimensionless lift coefficient) is computed each step via the spin
+    parameter S = omega * r / v (Bearman & Harvey empirical fit):
+      Cl = 0.51 * S + 0.001   capped to [0, 0.5]
 
     Args:
         ball_speed_ms: Ball speed in m/s (field 1 from device).
         launch_deg:    Launch angle in degrees (field 2 from device).
+        spin_rpm:      Backspin in rpm (defaults to 5000 if not provided).
 
     Returns:
         Carry in yards, or 0.0 for non-positive inputs.
     """
     if ball_speed_ms <= 0 or launch_deg <= 0:
         return 0.0
-    carry_m = ball_speed_ms ** 2 * math.sin(math.radians(2 * launch_deg)) / 9.81
-    # Empirical aerodynamic correction calibrated to two verified data points:
-    # v=21.65 m/s (48.4 mph), 24.79° → 39.9 yds (factor 1.000)
-    # v=46.98 m/s (105.1 mph), 15.23° → 145.4 yds (factor 1.165)
-    _LO_V, _HI_V = 21.65, 46.98
-    _LO_F, _HI_F = 1.000, 1.165
-    t = max(0.0, (ball_speed_ms - _LO_V) / (_HI_V - _LO_V))
-    correction = _LO_F + t * (_HI_F - _LO_F)
-    return round(carry_m * correction / 0.9144, 1)
+
+    Cd     = 0.25
+    rho    = 1.225
+    A      = 0.00143
+    m      = 0.0459
+    g      = 9.81
+    dt     = 0.01
+    r_ball = 0.0214   # golf ball radius (m)
+    omega  = spin_rpm * 2 * math.pi / 60  # angular velocity (rad/s)
+
+    angle = math.radians(launch_deg)
+    vx = ball_speed_ms * math.cos(angle)
+    vy = ball_speed_ms * math.sin(angle)
+    x  = 0.0
+    y  = 0.0
+
+    while y >= 0:
+        v    = math.sqrt(vx ** 2 + vy ** 2)
+        S    = omega * r_ball / max(v, 0.1)          # spin parameter
+        Cl   = max(0.0, min(0.5, 0.51 * S + 0.001)) # empirical lift coeff
+        drag = 0.5 * rho * Cd * A * v ** 2
+        lift = 0.5 * rho * Cl * A * v ** 2
+
+        ax = -drag * vx / (m * v)
+        ay = -g + (lift / m) - (drag * vy / (m * v))
+
+        vx += ax * dt
+        vy += ay * dt
+        x  += vx * dt
+        y  += vy * dt
+
+    return round(x / 0.9144, 1)
 
 
 def _estimate_side(carry_yards: float, side_angle_deg: float) -> float:
@@ -676,7 +699,7 @@ class App(tk.Tk):
         merged["ball_speed_mph"] = round(merged["ball_speed"] * 2.237, 1)
 
         # Estimate carry and side distance from ball speed + launch angle
-        merged["carry_yards"]     = _estimate_carry(merged["ball_speed"], merged["launch_angle"])
+        merged["carry_yards"]     = _estimate_carry(merged["ball_speed"], merged["launch_angle"], merged["backspin"])
         merged["side_dist_yards"] = _estimate_side(merged["carry_yards"], merged["side_angle"])
 
         # Directional labels for LLM prompt
