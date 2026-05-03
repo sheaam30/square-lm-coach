@@ -55,17 +55,17 @@ Club: {club_name}  |  Handed: {handed}
 SHOT DATA:
   Ball Speed   : {ball_speed_mph} mph
   Launch Angle : {launch_angle}°
-  Side Angle   : {side_angle}°
-  Backspin     : {backspin} rpm
-  Carry        : {carry}
-  Total Dist   : {total_dist}
-  Side Dist    : {side_dist}
+  Direction    : {side_angle}°
+  Spin Rate    : {backspin} rpm
+  Spin Axis    : {carry}°
+  Back Spin    : {total_dist} rpm
+  Side Spin    : {side_dist} rpm
 
 CLUB DATA:
-  Club Speed   : {club_speed} m/s
-  Attack Angle : {attack_angle}°   (negative = descending blow)
-  Club Path    : {club_path}°      (negative = out-to-in)
-  Face Angle   : {face_angle}°     (negative = closed)
+  Club Speed     : {club_speed} m/s
+  Face to Target : {attack_angle}°
+  Attack Angle   : {club_path}°   (negative = descending blow)
+  Dynamic Loft   : {face_angle}°
 
 Provide your feedback below:\
 """
@@ -326,18 +326,18 @@ class App(tk.Tk):
             ("Club",         "club_name"),
             ("Handed",       "handed"),
             None,
-            ("Ball Speed",   "ball_speed"),
-            ("Launch Angle", "launch_angle"),
-            ("Side Angle",   "side_angle"),
-            ("Backspin",     "backspin"),
-            ("Carry",        "carry"),
-            ("Total Dist",   "total_dist"),
-            ("Side Dist",    "side_dist"),
+            ("Ball Speed",    "ball_speed"),
+            ("Launch Angle",  "launch_angle"),
+            ("Direction",     "side_angle"),
+            ("Spin Rate",     "backspin"),
+            ("Spin Axis",     "carry"),
+            ("Back Spin",     "total_dist"),
+            ("Side Spin",     "side_dist"),
             None,
-            ("Club Speed",   "club_speed"),
-            ("Attack Angle", "attack_angle"),
-            ("Club Path",    "club_path"),
-            ("Face Angle",   "face_angle"),
+            ("Club Speed",    "club_speed"),
+            ("Face to Target","attack_angle"),
+            ("Attack Angle",  "club_path"),
+            ("Dynamic Loft",  "face_angle"),
         ]
         for item in rows:
             if item is None:

@@ -155,9 +155,16 @@ ALL_SCENARIOS = [
 # Required format keys in the default prompt
 REQUIRED_KEYS = {
     "club_name", "handed",
-    "ball_speed_mph", "launch_angle", "side_angle",
-    "backspin", "carry", "total_dist", "side_dist",
-    "club_speed", "attack_angle", "club_path", "face_angle",
+    "ball_speed_mph", "launch_angle",
+    "side_angle",   # Direction
+    "backspin",     # Spin Rate
+    "carry",        # Spin Axis
+    "total_dist",   # Back Spin
+    "side_dist",    # Side Spin
+    "club_speed",
+    "attack_angle", # Face to Target
+    "club_path",    # Attack Angle
+    "face_angle",   # Dynamic Loft
 }
 
 
@@ -262,12 +269,12 @@ class TestPromptCharacteristics:
     def test_attack_angle_note_present(self):
         """The descending blow annotation should appear in the rendered prompt."""
         prompt = render(DEFAULT_PROMPT, FAT_SHOT)
-        assert "descending" in prompt.lower() or "negative" in prompt.lower()
+        assert "descending" in prompt.lower() or "attack angle" in prompt.lower()
 
-    def test_club_path_note_present(self):
-        """The out-to-in annotation should appear in the rendered prompt."""
-        prompt = render(DEFAULT_PROMPT, PULL_HOOK)
-        assert "out-to-in" in prompt.lower() or "negative" in prompt.lower()
+    def test_dynamic_loft_label_present(self):
+        """Dynamic Loft label should appear in the rendered prompt."""
+        prompt = render(DEFAULT_PROMPT, SOLID_STRIKE)
+        assert "dynamic loft" in prompt.lower()
 
 
 # ── Custom template tests ─────────────────────────────────────────────────────
