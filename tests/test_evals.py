@@ -17,7 +17,11 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from main import CLUB_NAMES, DEFAULT_PROMPT, _estimate_carry, _estimate_side
+from main import (
+    CLUB_NAMES, DEFAULT_PROMPT,
+    _estimate_carry, _estimate_side,
+    _fmt_club_path, _fmt_face_angle, _fmt_attack_angle,
+)
 
 # ── Representative shot scenarios ─────────────────────────────────────────────
 # Each entry is a realistic complete shot dict as produced by _on_complete_shot.
@@ -37,6 +41,9 @@ PULL_HOOK = {
     "attack_angle": -4.6, "attack_angle_valid": True,
     "club_path": -6.42, "club_path_valid": True,
     "face_angle": 31.64, "face_angle_valid": True,
+    "club_path_dir": _fmt_club_path(-8.68, "Right"),
+    "face_angle_dir": _fmt_face_angle(-4.6, "Right"),
+    "attack_angle_dir": _fmt_attack_angle(-6.42),
 }
 
 PUSH_SLICE = {
@@ -54,6 +61,9 @@ PUSH_SLICE = {
     "attack_angle": 6.21, "attack_angle_valid": True,
     "club_path": 6.64, "club_path_valid": True,
     "face_angle": 33.36, "face_angle_valid": True,
+    "club_path_dir": _fmt_club_path(12.92, "Right"),
+    "face_angle_dir": _fmt_face_angle(6.21, "Right"),
+    "attack_angle_dir": _fmt_attack_angle(6.64),
 }
 
 SOLID_STRIKE = {
@@ -71,6 +81,9 @@ SOLID_STRIKE = {
     "attack_angle": -3.2, "attack_angle_valid": True,
     "club_path": -0.5, "club_path_valid": True,
     "face_angle": 0.8, "face_angle_valid": True,
+    "club_path_dir": _fmt_club_path(10.5, "Right"),
+    "face_angle_dir": _fmt_face_angle(-3.2, "Right"),
+    "attack_angle_dir": _fmt_attack_angle(-0.5),
 }
 
 TOPPED_SHOT = {
@@ -88,6 +101,9 @@ TOPPED_SHOT = {
     "attack_angle": 5.5, "attack_angle_valid": True,
     "club_path": -1.0, "club_path_valid": True,
     "face_angle": 2.0, "face_angle_valid": True,
+    "club_path_dir": _fmt_club_path(9.0, "Right"),
+    "face_angle_dir": _fmt_face_angle(5.5, "Right"),
+    "attack_angle_dir": _fmt_attack_angle(-1.0),
 }
 
 FAT_SHOT = {
@@ -105,6 +121,9 @@ FAT_SHOT = {
     "attack_angle": -0.92, "attack_angle_valid": True,
     "club_path": -6.55, "club_path_valid": True,
     "face_angle": 33.84, "face_angle_valid": True,
+    "club_path_dir": _fmt_club_path(4.37, "Right"),
+    "face_angle_dir": _fmt_face_angle(-0.92, "Right"),
+    "attack_angle_dir": _fmt_attack_angle(-6.55),
 }
 
 INVALID_CLUB_DATA = {
@@ -122,6 +141,9 @@ INVALID_CLUB_DATA = {
     "attack_angle": -0.01, "attack_angle_valid": False,
     "club_path": -0.01, "club_path_valid": False,
     "face_angle": -0.01, "face_angle_valid": False,
+    "club_path_dir": _fmt_club_path(-0.01, "Right"),
+    "face_angle_dir": _fmt_face_angle(-0.01, "Right"),
+    "attack_angle_dir": _fmt_attack_angle(-0.01),
 }
 
 LEFT_HANDED = {
@@ -138,6 +160,9 @@ LEFT_HANDED = {
     "attack_angle": -2.0, "attack_angle_valid": True,
     "club_path": 1.5, "club_path_valid": True,
     "face_angle": 3.2, "face_angle_valid": True,
+    "club_path_dir": _fmt_club_path(15.1, "Left"),
+    "face_angle_dir": _fmt_face_angle(-2.0, "Left"),
+    "attack_angle_dir": _fmt_attack_angle(1.5),
 }
 
 UNKNOWN_CLUB = {
@@ -155,6 +180,9 @@ UNKNOWN_CLUB = {
     "attack_angle": -2.0, "attack_angle_valid": True,
     "club_path": 0.0, "club_path_valid": True,
     "face_angle": 0.0, "face_angle_valid": True,
+    "club_path_dir": _fmt_club_path(8.0, "Right"),
+    "face_angle_dir": _fmt_face_angle(-2.0, "Right"),
+    "attack_angle_dir": _fmt_attack_angle(0.0),
 }
 
 ALL_SCENARIOS = [
@@ -172,17 +200,17 @@ ALL_SCENARIOS = [
 REQUIRED_KEYS = {
     "club_name", "handed",
     "ball_speed_mph", "launch_angle",
-    "side_angle",       # Direction
-    "backspin",         # Spin Rate
-    "carry",            # Spin Axis
-    "total_dist",       # Back Spin component (rpm)
-    "side_dist",        # Side Spin component (rpm)
-    "carry_yards",      # Estimated carry distance
-    "side_dist_yards",  # Estimated side distance
-    "club_speed",       # Club Path (degrees)
-    "attack_angle",     # Face to Target
-    "club_path",        # Attack Angle
-    "face_angle",       # Dynamic Loft
+    "side_angle",        # Direction
+    "backspin",          # Spin Rate
+    "carry",             # Spin Axis
+    "total_dist",        # Back Spin component (rpm)
+    "side_dist",         # Side Spin component (rpm)
+    "carry_yards",       # Estimated carry distance
+    "side_dist_yards",   # Estimated side distance
+    "club_path_dir",     # Club Path with direction label
+    "face_angle_dir",    # Face to Target with direction label
+    "attack_angle_dir",  # Attack Angle with direction label
+    "face_angle",        # Dynamic Loft (degrees)
 }
 
 
@@ -251,22 +279,23 @@ class TestPromptTemplate:
 class TestPromptCharacteristics:
 
     def test_out_to_in_path_reflected_in_prompt(self):
-        """A negative club_path value should appear literally in the prompt."""
+        """Out-to-in club path should appear as direction label, not raw negative."""
         prompt = render(DEFAULT_PROMPT, PULL_HOOK)
-        assert "-6.42" in prompt
+        assert "Out-to-In" in prompt
 
     def test_open_face_reflected_in_prompt(self):
+        """Open face should appear as direction label in the prompt."""
         prompt = render(DEFAULT_PROMPT, PUSH_SLICE)
-        assert "33.36" in prompt
+        assert "Open" in prompt
 
     def test_left_handed_label_in_prompt(self):
         prompt = render(DEFAULT_PROMPT, LEFT_HANDED)
         assert "Left" in prompt
 
     def test_invalid_club_data_sentinel_in_prompt(self):
-        """Sensor-failure sentinel value (-0.01) should appear in the prompt."""
+        """Sensor-failure values should appear in the prompt (absolute value shown)."""
         prompt = render(DEFAULT_PROMPT, INVALID_CLUB_DATA)
-        assert "-0.01" in prompt
+        assert "0.01" in prompt
 
     def test_unknown_club_label_in_prompt(self):
         prompt = render(DEFAULT_PROMPT, UNKNOWN_CLUB)
@@ -285,9 +314,10 @@ class TestPromptCharacteristics:
         assert any(word in lower for word in ("tip", "feedback", "feel", "improve", "provide"))
 
     def test_attack_angle_note_present(self):
-        """The descending blow annotation should appear in the rendered prompt."""
+        """Attack angle direction label should appear in the rendered prompt."""
         prompt = render(DEFAULT_PROMPT, FAT_SHOT)
-        assert "descending" in prompt.lower() or "attack angle" in prompt.lower()
+        # FAT_SHOT club_path=-6.55 → "Descending"
+        assert "descending" in prompt.lower() or "ascending" in prompt.lower() or "attack angle" in prompt.lower()
 
     def test_dynamic_loft_label_present(self):
         """Dynamic Loft label should appear in the rendered prompt."""

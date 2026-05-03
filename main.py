@@ -71,9 +71,9 @@ SHOT DATA:
   Side         : {side_dist_yards} yds
 
 CLUB DATA:
-  Club Path      : {club_speed}°
-  Face to Target : {attack_angle}°
-  Attack Angle   : {club_path}°   (negative = descending blow)
+  Club Path      : {club_path_dir}
+  Face to Target : {face_angle_dir}
+  Attack Angle   : {attack_angle_dir}
   Dynamic Loft   : {face_angle}°
 
 Provide your feedback below:\
@@ -194,6 +194,47 @@ def _estimate_side(carry_yards: float, side_angle_deg: float) -> float:
         Side distance in yards (rounded to 1 dp).
     """
     return round(carry_yards * math.sin(math.radians(side_angle_deg)), 1)
+
+
+def _fmt_club_path(val: float, handed: str) -> str:
+    """Format club path with direction label instead of ± sign.
+
+    Positive = In-to-Out for a right-hander (reversed for left-hander).
+    """
+    if val == 0:
+        return "0.0° Neutral"
+    righty_positive = "In-to-Out"
+    righty_negative = "Out-to-In"
+    if handed == "Left":
+        righty_positive, righty_negative = righty_negative, righty_positive
+    direction = righty_positive if val > 0 else righty_negative
+    return f"{abs(val)}° {direction}"
+
+
+def _fmt_face_angle(val: float, handed: str) -> str:
+    """Format face-to-target with direction label instead of ± sign.
+
+    Positive = Open for a right-hander (reversed for left-hander).
+    """
+    if val == 0:
+        return "0.0° Square"
+    righty_positive = "Open"
+    righty_negative = "Closed"
+    if handed == "Left":
+        righty_positive, righty_negative = righty_negative, righty_positive
+    direction = righty_positive if val > 0 else righty_negative
+    return f"{abs(val)}° {direction}"
+
+
+def _fmt_attack_angle(val: float) -> str:
+    """Format attack angle with direction label instead of ± sign.
+
+    Negative = descending blow, positive = ascending (e.g. driver off tee).
+    """
+    if val == 0:
+        return "0.0° Level"
+    direction = "Ascending" if val > 0 else "Descending"
+    return f"{abs(val)}° {direction}"
 
 
 # ── Log tailer ────────────────────────────────────────────────────────────────
@@ -609,6 +650,12 @@ class App(tk.Tk):
         merged["carry_yards"]     = _estimate_carry(merged["ball_speed"], merged["launch_angle"])
         merged["side_dist_yards"] = _estimate_side(merged["carry_yards"], merged["side_angle"])
 
+        # Directional labels for LLM prompt
+        handed = merged["handed"]
+        merged["club_path_dir"]   = _fmt_club_path(merged["club_speed"], handed)
+        merged["face_angle_dir"]  = _fmt_face_angle(merged["attack_angle"], handed)
+        merged["attack_angle_dir"] = _fmt_attack_angle(merged["club_path"])
+
         # Validity suffix helper
         def v(key: str, unit: str = "") -> str:
             val   = merged[key]
@@ -628,9 +675,15 @@ class App(tk.Tk):
         self._fields["side_dist"].configure(text=v("side_dist",              " rpm"))
         self._fields["carry_yards"].configure(text=f'{merged["carry_yards"]} yds')
         self._fields["side_dist_yards"].configure(text=f'{merged["side_dist_yards"]} yds')
-        self._fields["club_speed"].configure(text=v("club_speed",            "°"))
-        self._fields["attack_angle"].configure(text=v("attack_angle","°"))
-        self._fields["club_path"].configure(text=v("club_path",     "°"))
+        def _vdir(key: str, fmt_fn) -> str:
+            text = fmt_fn(merged[key])
+            return text if merged.get(f"{key}_valid", True) else f"{text} (?)"
+        self._fields["club_speed"].configure(
+            text=_vdir("club_speed", lambda val: _fmt_club_path(val, handed)))
+        self._fields["attack_angle"].configure(
+            text=_vdir("attack_angle", lambda val: _fmt_face_angle(val, handed)))
+        self._fields["club_path"].configure(
+            text=_vdir("club_path", _fmt_attack_angle))
         self._fields["face_angle"].configure(text=v("face_angle",   "°"))
 
         # Store for export
